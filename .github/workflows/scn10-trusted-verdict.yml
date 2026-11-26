@@ -1,0 +1,29 @@
+# SPDX-FileCopyrightText: 2026 boob.yang
+name: SCN-10 trusted verdict attestation
+on:
+  push:
+    branches: [codex/scn10-attest-verdict]
+permissions:
+  contents: read
+  id-token: write
+  attestations: write
+jobs:
+  attest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.workflow_sha }}
+          persist-credentials: false
+      - name: Attest the synthetic verdict
+        id: attest
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6
+        with:
+          subject-path: test-fixtures/scn10-attest/verdict.json
+      - name: Record the public verification bundle
+        env:
+          BUNDLE: ${{ steps.attest.outputs.bundle-path }}
+        run: |
+          test -s "$BUNDLE"
+          printf 'SCN10_BUNDLE_BASE64=%s\n' "$(base64 -w0 "$BUNDLE")"
