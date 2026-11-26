@@ -1,0 +1,11 @@
+name: SDLC-0080 different caller repository
+on: workflow_dispatch
+permissions:
+  contents: read
+  id-token: write
+jobs:
+  wrong-repository:
+    uses: yangbobo2021/anthropic-sdlc-oidc-testbed/.github/workflows/verify-oidc.yml@main
+    with:
+      case: wrong-repository
+      target: production
