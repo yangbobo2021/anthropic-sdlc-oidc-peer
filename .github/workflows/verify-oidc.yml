@@ -1,0 +1,66 @@
+# SPDX-FileCopyrightText: 2026 boob.yang
+name: Verify AWS role identity
+on:
+  workflow_call:
+permissions:
+  contents: read
+  id-token: write
+jobs:
+  check:
+    if: github.ref == 'refs/heads/main' && github.ref_protected
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        case: [allow, reject-audience, reject-repository, reject-environment, reject-workflow, reject-workflow-ref]
+    env:
+      AWS_ENDPOINT_URL_STS: http://127.0.0.1:18284
+      AWS_EC2_METADATA_DISABLED: "true"
+      AWS_ACCESS_KEY_ID: SYNTHETICAMBIENT
+      AWS_SECRET_ACCESS_KEY: synthetic-ambient-only
+    steps:
+    - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      with:
+        ref: ${{ github.workflow_sha }}
+        persist-credentials: false
+    - name: Start the loopback STS transport and OpenBao target
+      env:
+        TEST_CASE: ${{ matrix.case }}
+        ROLE_ARN: ${{ vars.SDLC_OIDC_TEST_ROLE_ARN }}
+        REGION: ${{ vars.SDLC_AWS_REGION }}
+      run: bash fixtures/sdlc0080-sts/serve.sh
+    - name: Check role identity
+      id: exchange
+      continue-on-error: ${{ matrix.case != 'allow' }}
+      env:
+        AWS_ROLE_ARN: ${{ vars.SDLC_OIDC_TEST_ROLE_ARN }}
+        AWS_REGION: ${{ vars.SDLC_AWS_REGION }}
+      shell: bash
+      run: |
+        set -euo pipefail
+        umask 077
+        test -n "$AWS_ROLE_ARN"
+        token_file=$(mktemp)
+        trap 'rm -f "$token_file"' EXIT
+        curl -fsS -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+          "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=sts.amazonaws.com" \
+          | jq -erj '.value | select(type == "string" and length > 0)' > "$token_file"
+        aws sts assume-role-with-web-identity --no-sign-request \
+          --role-arn "$AWS_ROLE_ARN" \
+          --role-session-name "sdlc-$GITHUB_RUN_ID" \
+          --web-identity-token "file://$token_file" \
+          --query AssumedRoleUser.Arn --output text
+    - name: Verify the observed request and target outcome
+      if: always()
+      env:
+        TEST_CASE: ${{ matrix.case }}
+        STEP_OUTCOME: ${{ steps.exchange.outcome }}
+      run: python3 fixtures/sdlc0080-sts/assert-receipt.py
+    - name: Stop the temporary broker
+      if: always()
+      run: |
+        for path in "$RUNNER_TEMP/sdlc0080/"{broker,bao}.pid; do
+          if [[ -s "$path" ]]; then kill "$(cat "$path")" 2>/dev/null || true; fi
+        done

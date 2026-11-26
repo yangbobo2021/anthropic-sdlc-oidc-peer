@@ -1,0 +1,18 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Federated": "arn:aws:iam::000000000000:oidc-provider/token.actions.githubusercontent.com"
+      },
+      "Action": "sts:AssumeRoleWithWebIdentity",
+      "Condition": {
+        "StringEquals": {
+          "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
+          "token.actions.githubusercontent.com:sub": "repo:EXAMPLE_ORG@OWNER_ID/EXAMPLE_REPOSITORY@REPOSITORY_ID:environment:production:job_workflow_ref:EXAMPLE_ORG/EXAMPLE_REPOSITORY/.github/workflows/verify-oidc.yml@refs/heads/main"
+        }
+      }
+    }
+  ]
+}
