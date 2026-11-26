@@ -1,0 +1,11 @@
+# SPDX-FileCopyrightText: 2026 boob.yang
+name: Verify team AWS federation
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  id-token: write
+jobs:
+  verify:
+    if: github.ref == 'refs/heads/main' && github.ref_protected
+    uses: ./.github/workflows/verify-oidc.yml
