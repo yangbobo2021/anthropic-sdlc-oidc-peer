@@ -201,4 +201,6 @@ class STS(BaseHTTPRequestHandler):
 
 if __name__ == "__main__":
     POLICY = target_policy()
-    HTTPServer(("127.0.0.1", 18284), STS).serve_forever()
+    with HTTPServer(("127.0.0.1", 0), STS) as server:
+        (ROOT / "broker.port").write_text(str(server.server_port))
+        server.serve_forever()

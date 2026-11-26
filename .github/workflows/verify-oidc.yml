@@ -16,7 +16,6 @@ jobs:
       matrix:
         case: [allow, reject-audience, reject-repository, reject-environment, reject-workflow, reject-workflow-ref]
     env:
-      AWS_ENDPOINT_URL_STS: http://127.0.0.1:18284
       AWS_EC2_METADATA_DISABLED: "true"
       AWS_ACCESS_KEY_ID: SYNTHETICAMBIENT
       AWS_SECRET_ACCESS_KEY: synthetic-ambient-only

@@ -31,7 +31,13 @@ python3 "$GITHUB_WORKSPACE/fixtures/sdlc0080-sts/sts.py" > broker.log 2>&1 &
 broker_pid=$!
 echo "$broker_pid" > broker.pid
 for _ in {1..30}; do
-  if curl -fsS http://127.0.0.1:18284/health 2>/dev/null >/dev/null; then exit 0; fi
+  if [[ -s broker.port ]]; then
+    port="$(cat broker.port)"
+    if curl -fsS "http://127.0.0.1:$port/health" 2>/dev/null >/dev/null; then
+      printf 'AWS_ENDPOINT_URL_STS=http://127.0.0.1:%s\n' "$port" >> "$GITHUB_ENV"
+      exit 0
+    fi
+  fi
   if ! kill -0 "$broker_pid" 2>/dev/null; then
     # No identity request has run at this point.
     cat broker.log >&2
